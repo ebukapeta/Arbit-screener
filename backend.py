@@ -380,10 +380,15 @@ def run_scan(settings, logger):
 # ====================== ROUTES ======================
 @app.route('/')
 def index():
-    with open('frontend.html', 'r') as f:
-        html = f.read()
-    return render_template_string(html, TOP_EXCHANGES=TOP_EXCHANGES, EXCHANGE_NAMES=EXCHANGE_NAMES)
-
+    try:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        html_path = os.path.join(base_dir, 'frontend.html')
+        with open(html_path, 'r') as f:
+            html = f.read()
+        return render_template_string(html, TOP_EXCHANGES=TOP_EXCHANGES, EXCHANGE_NAMES=EXCHANGE_NAMES)
+    except FileNotFoundError:
+        return "Error: frontend.html not found. Please ensure it's deployed with the backend.", 500
+        
 @app.route('/api/scan', methods=['POST'])
 def api_scan():
     settings = request.get_json() or {}
