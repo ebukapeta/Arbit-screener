@@ -1,5 +1,4 @@
 import time, re, ccxt, json, os
-import pandas as pd
 from flask import Flask, request, jsonify, render_template_string
 from flask_cors import CORS
 
