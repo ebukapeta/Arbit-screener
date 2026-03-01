@@ -31,7 +31,7 @@ TOP_EXCHANGES = [
     "binance", "okx", "coinbase", "kraken", "bybit", "kucoin",
     "mexc", "bitfinex", "bitget", "gateio", "crypto_com",
     "upbit", "whitebit", "poloniex", "bingx", "lbank",
-    "bitstamp", "gemini", "bitrue", "XT", "huobi", "bitmart", "coinex"
+    "bitstamp", "gemini", "bitrue", "xt", "huobi", "bitmart", "coinex"
 ]
 
 EXCHANGE_NAMES = {
@@ -50,7 +50,7 @@ EXTRA_OPTS = {
     "bingx": {"options": {"defaultType": "spot"}},
     "mexc": {"options": {"defaultType": "spot"}},
     "bitrue": {"options": {"defaultType": "spot"}},
-    "XT": {"options": {"defaultType": "spot"}},
+    "xt": {"options": {"defaultType": "spot"}},
     "huobi": {"options": {"defaultType": "spot"}},
     "bitmart": {"options": {"defaultType": "spot"}},
     "coinex": {"options": {"defaultType": "spot"}},
