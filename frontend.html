@@ -143,8 +143,30 @@
         border-color: rgba(255, 255, 255, 0.2);
     }
     
+    .table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        max-height: 600px;
+    }
+    
+    .table-wrapper::-webkit-scrollbar {
+        height: 8px;
+        width: 8px;
+    }
+    
+    .table-wrapper::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 4px;
+    }
+    
+    .table-wrapper::-webkit-scrollbar-thumb {
+        background: rgba(139, 92, 246, 0.5);
+        border-radius: 4px;
+    }
+    
     .data-table {
-        width: 100%;
+        width: auto;
+        min-width: 100%;
         border-collapse: separate;
         border-spacing: 0;
         font-size: 12px;
@@ -160,20 +182,21 @@
         background: linear-gradient(180deg, rgba(26, 26, 46, 0.95) 0%, rgba(15, 15, 30, 0.95) 100%);
         backdrop-filter: blur(10px);
         color: #a8b3cf;
-        padding: 12px 8px;
+        padding: 16px 12px;
         text-align: left;
         font-weight: 600;
-        font-size: 10px;
+        font-size: 11px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
         border-bottom: 2px solid rgba(139, 92, 246, 0.3);
         white-space: nowrap;
+        min-width: 80px;
     }
     
     .data-table td {
-        padding: 12px 8px;
+        padding: 16px 12px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        font-size: 12px;
+        font-size: 13px;
         white-space: nowrap;
     }
     
@@ -189,44 +212,58 @@
     .status-badge {
         display: inline-flex;
         align-items: center;
-        padding: 3px 8px;
-        border-radius: 20px;
-        font-size: 10px;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        font-size: 14px;
         font-weight: 700;
-        letter-spacing: 0.3px;
     }
     
     .badge-success {
-        background: rgba(16, 185, 129, 0.15);
+        background: rgba(16, 185, 129, 0.2);
         color: #10b981;
-        border: 1px solid rgba(16, 185, 129, 0.3);
+        border: 1px solid rgba(16, 185, 129, 0.4);
     }
     
     .badge-danger {
-        background: rgba(239, 68, 68, 0.15);
+        background: rgba(239, 68, 68, 0.2);
         color: #ef4444;
-        border: 1px solid rgba(239, 68, 68, 0.3);
+        border: 1px solid rgba(239, 68, 68, 0.4);
     }
     
     .badge-info {
         background: rgba(59, 130, 246, 0.15);
         color: #3b82f6;
         border: 1px solid rgba(59, 130, 246, 0.3);
+        border-radius: 12px;
+        padding: 4px 10px;
+        font-size: 10px;
+        font-weight: 600;
     }
     
     .profit-positive {
         color: #10b981;
         font-weight: 700;
+        font-size: 14px;
     }
     
     .profit-negative {
         color: #ef4444;
         font-weight: 700;
+        font-size: 14px;
     }
     
     .spread-value {
         color: #60a5fa;
         font-weight: 700;
+        font-size: 14px;
+    }
+    
+    .bold-mono {
+        font-family: 'Courier New', monospace;
+        font-weight: 700;
+        font-size: 14px;
     }
     
     .log-container {
@@ -301,10 +338,6 @@
         gap: 6px;
     }
     
-    .mono-font {
-        font-family: 'Courier New', monospace;
-    }
-    
     .text-right {
         text-align: right;
     }
@@ -321,7 +354,6 @@
         opacity: 0.3;
     }
     
-    /* Mobile optimizations */
     @media (max-width: 768px) {
         body { padding: 16px; }
         .glass-card { padding: 16px; border-radius: 12px; }
@@ -339,11 +371,12 @@
             min-height: 40px;
         }
         .data-table { font-size: 11px; }
-        .data-table th, .data-table td { padding: 8px 6px; }
+        .data-table th, .data-table td { padding: 12px 8px; }
         .metric-value { font-size: 20px; }
         .metric-label { font-size: 9px; }
         .exchange-selector { max-height: 150px; }
         .log-container { max-height: 200px; }
+        .table-wrapper { max-height: 500px; }
     }
     
     @media (min-width: 769px) {
@@ -357,6 +390,7 @@
         .metric-label { font-size: 12px; }
         .exchange-selector { max-height: 300px; }
         .log-container { max-height: 400px; }
+        .table-wrapper { max-height: 600px; }
     }
     
     .spinner {
@@ -376,7 +410,6 @@
 </head>
 <body>
 
-<!-- Header -->
 <div class="mb-6 md:mb-10">
     <h1 class="text-2xl md:text-4xl font-bold mb-2 flex items-center gap-3">
         <span class="text-3xl md:text-5xl">🌍</span>
@@ -387,11 +420,9 @@
     <p class="text-gray-400 text-sm md:text-base ml-12 md:ml-16">Real-time cryptocurrency arbitrage opportunity detection</p>
 </div>
 
-<!-- Configuration Panel -->
 <div class="glass-card p-4 md:p-8 mb-6">
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        <!-- Buy Exchanges -->
         <div>
             <div class="section-header">
                 <span>📥</span> Buy Exchanges
@@ -403,7 +434,6 @@
             </p>
         </div>
         
-        <!-- Sell Exchanges -->
         <div>
             <div class="section-header">
                 <span>📤</span> Sell Exchanges
@@ -415,13 +445,11 @@
             </p>
         </div>
         
-        <!-- Filters -->
         <div class="space-y-3 md:space-y-4">
             <div class="section-header">
                 <span>⚙️</span> Filters & Settings
             </div>
             
-            <!-- Profit Range -->
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-xs text-gray-400 mb-1">Min Profit %</label>
@@ -433,13 +461,11 @@
                 </div>
             </div>
             
-            <!-- Volume -->
             <div>
                 <label class="block text-xs text-gray-400 mb-1">Min 24h Volume (USD)</label>
                 <input id="minVol" type="number" value="100000" class="input-field">
             </div>
             
-            <!-- Exclude Chains -->
             <div>
                 <label class="block text-xs text-gray-400 mb-1">Exclude Blockchains</label>
                 <select id="exclude" multiple size="3" class="exchange-selector w-full p-2 text-sm">
@@ -455,7 +481,6 @@
                 </select>
             </div>
             
-            <!-- Include All Chains -->
             <label class="flex items-center gap-2 cursor-pointer">
                 <input id="includeAll" type="checkbox" checked class="w-4 h-4 rounded border-2 border-purple-500 bg-transparent checked:bg-purple-500">
                 <span class="text-xs md:text-sm text-gray-300">Include all available chains</span>
@@ -464,7 +489,6 @@
     </div>
 </div>
 
-<!-- Action Buttons -->
 <div class="flex flex-col sm:flex-row gap-3 md:gap-4 mb-6">
     <button id="scanBtn" onclick="startScan()" class="btn-primary flex-1 py-3 md:py-4 rounded-xl text-sm md:text-base flex items-center justify-center gap-2">
         <span id="scanIcon" class="text-lg md:text-xl">🚀</span>
@@ -476,7 +500,6 @@
     </button>
 </div>
 
-<!-- Metrics Dashboard -->
 <div id="metricsPanel" class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-6" style="display: none;">
     <div class="metric-card">
         <div class="metric-value" id="totalOpps">0</div>
@@ -496,10 +519,8 @@
     </div>
 </div>
 
-<!-- Results Section -->
 <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
     
-    <!-- Log Panel -->
     <div class="lg:col-span-4 glass-card p-4 md:p-6">
         <div class="section-header mb-3">
             <span>📊</span> Live Activity Log
@@ -507,7 +528,6 @@
         <div id="log" class="log-container"></div>
     </div>
     
-    <!-- Results Table -->
     <div class="lg:col-span-8 glass-card overflow-hidden">
         <div class="px-4 md:px-6 py-4 border-b border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
             <div class="flex items-center gap-2">
@@ -516,7 +536,7 @@
             </div>
             <div id="lastScan" class="text-xs md:text-sm text-gray-500">Never scanned</div>
         </div>
-        <div id="tableContainer" class="overflow-auto" style="max-height: 400px;"></div>
+        <div id="tableContainer" class="table-wrapper"></div>
     </div>
     
 </div>
@@ -543,7 +563,6 @@ function populateSelects() {
         sell.appendChild(optSell);
     });
     
-    // Default selections
     if (buy.options.length > 0) buy.options[0].selected = true;
     if (sell.options.length > 1) sell.options[1].selected = true;
     
@@ -627,15 +646,21 @@ function renderTable(results) {
             <thead>
                 <tr>
                     <th class="text-right">#</th>
-                    <th>Pair</th>
-                    <th>Buy @</th>
-                    <th>Sell @</th>
-                    <th class="text-right">Profit %</th>
-                    <th class="text-right">Spread %</th>
-                    <th class="text-right hidden sm:table-cell">Buy Vol</th>
-                    <th class="text-right hidden sm:table-cell">Sell Vol</th>
-                    <th class="hidden md:table-cell">Chain</th>
-                    <th class="hidden lg:table-cell">Stability</th>
+                    <th>PAIR</th>
+                    <th>QUOTE</th>
+                    <th>BUY @</th>
+                    <th class="text-right">BUY PRICE</th>
+                    <th>SELL @</th>
+                    <th class="text-right">SELL PRICE</th>
+                    <th class="text-right">SPREAD %</th>
+                    <th class="text-right">NET PROFIT %</th>
+                    <th class="text-right">BUY VOL</th>
+                    <th class="text-right">SELL VOL</th>
+                    <th class="text-center">W</th>
+                    <th class="text-center">D</th>
+                    <th>CHAIN</th>
+                    <th>STABILITY</th>
+                    <th>EXPIRY</th>
                 </tr>
             </thead>
             <tbody>
@@ -643,19 +668,27 @@ function renderTable(results) {
     
     results.forEach((r, i) => {
         const profitClass = r["Profit % After Fees"] >= 0 ? "profit-positive" : "profit-negative";
+        const wBadge = r["Withdraw?"] === "✅" ? "badge-success" : "badge-danger";
+        const dBadge = r["Deposit?"] === "✅" ? "badge-success" : "badge-danger";
         
         html += `
             <tr>
-                <td class="text-right mono-font text-gray-500">${i + 1}</td>
-                <td class="mono-font font-semibold">${r.Pair}</td>
-                <td>${r["Buy@"]}</td>
-                <td>${r["Sell@"]}</td>
-                <td class="text-right ${profitClass}">${r["Profit % After Fees"]}%</td>
+                <td class="text-right" style="color: #6b7280; font-weight: 600;">${i + 1}</td>
+                <td class="bold-mono">${r.Pair}</td>
+                <td style="color: #a8b3cf; font-weight: 600;">${r.Quote}</td>
+                <td style="font-weight: 600;">${r["Buy@"]}</td>
+                <td class="text-right bold-mono">${r["Buy Price"]}</td>
+                <td style="font-weight: 600;">${r["Sell@"]}</td>
+                <td class="text-right bold-mono">${r["Sell Price"]}</td>
                 <td class="text-right spread-value">${r["Spread %"]}%</td>
-                <td class="text-right mono-font hidden sm:table-cell">${r["Buy Vol (24h)"]}</td>
-                <td class="text-right mono-font hidden sm:table-cell">${r["Sell Vol (24h)"]}</td>
-                <td class="hidden md:table-cell"><span class="status-badge badge-info">${r.Blockchain}</span></td>
-                <td class="text-xs text-gray-400 hidden lg:table-cell">${r.Stability}</td>
+                <td class="text-right ${profitClass}">${r["Profit % After Fees"]}%</td>
+                <td class="text-right bold-mono">${r["Buy Vol (24h)"]}</td>
+                <td class="text-right bold-mono">${r["Sell Vol (24h)"]}</td>
+                <td class="text-center"><span class="status-badge ${wBadge}">${r["Withdraw?"]}</span></td>
+                <td class="text-center"><span class="status-badge ${dBadge}">${r["Deposit?"]}</span></td>
+                <td><span class="badge-info">${r.Blockchain}</span></td>
+                <td style="font-size: 12px; color: #9ca3af;">${r.Stability}</td>
+                <td style="font-size: 12px; color: #9ca3af;">${r["Est. Expiry"]}</td>
             </tr>
         `;
     });
@@ -747,7 +780,7 @@ function downloadCSV() {
                     : value;
             }).join(',')
         )
-    ].join('\n');
+    ].join('\\n');
     
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -769,4 +802,3 @@ window.onload = () => {
 
 </body>
 </html>
-
