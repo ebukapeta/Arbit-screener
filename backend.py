@@ -64,7 +64,11 @@ USD_QUOTES = {"USDT", "USD", "USDC", "BUSD"}
 LOW_FEE_CHAIN_PRIORITY = [
     "TRC20", "BSC", "SOL", "MATIC", "ARB", "OP", "TON", "AVAX", "ETH"
 ]
-LEV_REGEX = re.compile(r"\b(\d+[LS]|UP|DOWN|BULL|BEAR)\b", re.IGNORECASE)
+
+# Fixed: removed \b word boundaries so patterns inside symbol names are caught.
+# Old regex missed XAU3L, TSLA3S, TON3S etc. because \b does not trigger
+# between alphanumeric characters — 3L in XAU3L has no word boundary before it.
+LEV_REGEX = re.compile(r"\d+[LS]|UP|DOWN|BULL|BEAR", re.IGNORECASE)
 
 # Every alias maps to one canonical name so chain intersection works correctly.
 # Old code swapped names (BSC->BEP20, BEP20->BSC) so they never matched.
@@ -110,6 +114,7 @@ def market_price_from_ticker(t):
         except: return None
     return None
 
+# Reduced from 300s (5 minutes) to 30s — stale prices are dangerous for arb
 def is_ticker_fresh(t, max_age_sec=30):
     ts = t.get("timestamp")
     if ts is None: return True
@@ -138,6 +143,7 @@ def update_lifetime_for_disappeared(current_keys):
                 if duration > 0:
                     hist = lifetime_history.setdefault(key, [])
                     hist.append(duration)
+                    # Cap at 50 entries — prevents unbounded memory growth
                     if len(hist) > 50:
                         lifetime_history[key] = hist[-50:]
         last_seen_keys.clear()
@@ -149,18 +155,18 @@ def stability_and_expiry(key, current_profit):
         trail = op_cache.get(key, [])
         if not trail:
             op_cache[key] = [(now, current_profit)]
-            return "new", "~unknown"
+            return "⏳ new", "~unknown"
         trail.append((now, current_profit))
         op_cache[key] = trail[-30:]
         duration = trail[-1][0] - trail[0][0]
-        observed = f"{secs_to_label(duration)} observed"
+        observed = f"⏳ {secs_to_label(duration)} observed"
         hist     = lifetime_history.get(key, [])
         if not hist:
             expiry = "~unknown"
         else:
             avg       = sum(hist) / len(hist)
             remaining = avg - duration
-            expiry    = "past avg" if remaining <= 0 else f"~{secs_to_label(remaining)} left"
+            expiry    = "⚠️ past avg" if remaining <= 0 else f"~{secs_to_label(remaining)} left"
         return observed, expiry
 
 INFO_VOLUME_CANDIDATES = [
@@ -226,30 +232,33 @@ def choose_common_chain(b_slim_curr, s_slim_curr, coin, exclude_chains, include_
     try:
         nets1_raw = (b_slim_curr.get(coin) or {}).get("networks") or {}
         nets2_raw = (s_slim_curr.get(coin) or {}).get("networks") or {}
-        if not nets1_raw or not nets2_raw:
-            return "Unverified", "unverified", "unverified"
+
         nets1_norm = {normalize_chain(k): (k, v) for k, v in nets1_raw.items()}
         nets2_norm = {normalize_chain(k): (k, v) for k, v in nets2_raw.items()}
+
         common_norm = set(nets1_norm.keys()) & set(nets2_norm.keys())
         if not common_norm:
-            return "No chain", "no", "no"
+            return "❌ No chain", "❌", "❌"
+
         exclude_norm   = {normalize_chain(c) for c in exclude_chains} if not include_all else set()
         preferred_norm = [
             normalize_chain(n) for n in LOW_FEE_CHAIN_PRIORITY
             if normalize_chain(n) not in exclude_norm
         ]
+
         best_norm = next((p for p in preferred_norm if p in common_norm), None)
         if not best_norm:
             candidates = [c for c in common_norm if c not in exclude_norm]
-            if not candidates: return "No chain", "no", "no"
+            if not candidates: return "❌ No chain", "❌", "❌"
             best_norm = sorted(candidates)[0]
+
         _, info1 = nets1_norm[best_norm]
         _, info2 = nets2_norm[best_norm]
-        w_ok = "yes" if info1.get("withdraw") else "no"
-        d_ok = "yes" if info2.get("deposit")  else "no"
+        w_ok = "✅" if info1.get("withdraw") else "❌"
+        d_ok = "✅" if info2.get("deposit")  else "❌"
         return best_norm, w_ok, d_ok
     except:
-        return "Unknown", "no", "no"
+        return "❌ Unknown", "❌", "❌"
 
 def fetch_tickers_safe(ex, name, logger):
     for attempt in range(3):
@@ -313,7 +322,7 @@ def strip_tickers(raw_tickers):
 #          Peak memory = 150MB (ccxt base) + 1 full exchange (~9MB) = ~160MB max.
 #
 # PHASE 2: Process all combos using only the slim dicts already in memory.
-#          No HTTP calls. No ccxt objects. Just dict lookups.
+#          No HTTP calls. No ccxt objects. Just dict lookups and arithmetic.
 #          Steady state = 150MB base + all slim dicts (~2.5MB) = ~152MB.
 #
 # For 8 exchanges: 56 combos processed entirely from ~152MB of memory.
@@ -465,8 +474,11 @@ def run_scan(settings, logger):
                 b_slim_c, s_slim_c, base, exclude, include_all
             )
 
-            if w_ok == "no" or d_ok == "no": continue
-            if not include_all and chain in ("No chain", "Unknown"): continue
+            if w_ok != "✅" or d_ok != "✅": continue
+            if not include_all and (
+                chain.startswith("❌") or
+                normalize_chain(chain) in {normalize_chain(c) for c in exclude}
+            ): continue
 
             key = f"{sym}|{b_id}>{s_id}"
             current_keys.append(key)
@@ -491,7 +503,10 @@ def run_scan(settings, logger):
             })
 
         all_results.extend(combo_results)
-        logger(f"Combo {combo_num}/{len(combos)} {b_name}->{s_name}: {len(combo_results)} opportunities")
+        logger(
+            f"Combo {combo_num}/{len(combos)} "
+            f"{b_name}->{s_name}: {len(combo_results)} opportunities"
+        )
 
     update_lifetime_for_disappeared(current_keys)
 
@@ -534,6 +549,7 @@ def api_scan():
 
     return jsonify({"results": results, "logs": logs})
 
+
 @app.route('/api/exchanges')
 def get_exchanges():
     return jsonify({
@@ -544,3 +560,4 @@ def get_exchanges():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+   
