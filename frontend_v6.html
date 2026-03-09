@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Cross-Exchange Arbitrage Scanner</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    
+    body { 
+        background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+        color: #e8eaed;
+        font-family: 'Inter', system-ui, sans-serif;
+        min-height: 100vh;
+        overflow-x: hidden;
+    }
+    
+    .glass-card {
+        background: rgba(26, 26, 46, 0.7);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+    
+    .exchange-selector {
+        background: rgba(15, 15, 30, 0.6);
+        border: 2px solid transparent;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        max-height: 200px;
+        overflow-y: auto;
+        font-size: 14px;
+    }
+    
+    .exchange-selector::-webkit-scrollbar { width: 6px; }
+    .exchange-selector::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 4px; }
+    .exchange-selector::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.5); border-radius: 4px; }
+    
+    .exchange-selector:focus {
+        border-color: rgba(139, 92, 246, 0.5);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+    }
+    
+    .exchange-selector option {
+        padding: 10px;
+        background: #1a1a2e;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        cursor: pointer;
+    }
+    
+    .exchange-selector option:checked {
+        background: linear-gradient(90deg, rgba(139, 92, 246, 0.3) 0%, rgba(59, 130, 246, 0.3) 100%);
+        color: #fff;
+        font-weight: 600;
+    }
+    
+    .input-field {
+        background: rgba(15, 15, 30, 0.6);
+        border: 2px solid rgba(255, 255, 255, 0.08);
+        color: #e8eaed;
+        border-radius: 10px;
+        padding: 10px 14px;
+        transition: all 0.3s ease;
+        font-weight: 500;
+        font-size: 14px;
+        width: 100%;
+    }
+    
+    .input-field:focus {
+        border-color: rgba(139, 92, 246, 0.5);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+        background: rgba(15, 15, 30, 0.8);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+        border: none;
+        color: white;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 16px rgba(139, 92, 246, 0.4);
+        padding: 12px 20px;
+        border-radius: 12px;
+        font-size: 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 44px;
+        cursor: pointer;
+    }
+    
+    .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(139,92,246,0.5); }
+    .btn-primary:active:not(:disabled) { transform: translateY(0); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; filter: grayscale(0.5); }
+    
+    .btn-secondary {
+        background: rgba(255, 255, 255, 0.05);
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        color: #e8eaed;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        padding: 12px 20px;
+        border-radius: 12px;
+        font-size: 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 44px;
+        cursor: pointer;
+    }
+    
+    .btn-secondary:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
+    
+    .table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        max-height: 600px;
+    }
+    
+    .table-wrapper::-webkit-scrollbar { height: 8px; width: 8px; }
+    .table-wrapper::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 4px; }
+    .table-wrapper::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.5); border-radius: 4px; }
+    
+    .data-table {
+        width: auto;
+        min-width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 12px;
+    }
+    
+    .data-table thead { position: sticky; top: 0; z-index: 10; }
+    
+    .data-table th {
+        background: linear-gradient(180deg, rgba(26,26,46,0.95) 0%, rgba(15,15,30,0.95) 100%);
+        backdrop-filter: blur(10px);
+        color: #a8b3cf;
+        padding: 16px 12px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid rgba(139, 92, 246, 0.3);
+        white-space: nowrap;
+        min-width: 80px;
+    }
+    
+    .data-table td {
+        padding: 16px 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        font-size: 13px;
+        white-space: nowrap;
+    }
+    
+    .data-table tbody tr { background: rgba(26,26,46,0.3); transition: all 0.2s ease; }
+    .data-table tbody tr:hover { background: rgba(139,92,246,0.1); }
+    
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        font-size: 14px;
+        font-weight: 700;
+    }
+    
+    .badge-success {
+        background: rgba(16, 185, 129, 0.2);
+        color: #10b981;
+        border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+    
+    .badge-danger {
+        background: rgba(239, 68, 68, 0.2);
+        color: #ef4444;
+        border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+
+    .badge-neutral {
+        background: rgba(156, 163, 175, 0.15);
+        color: #9ca3af;
+        border: 1px solid rgba(156, 163, 175, 0.3);
+    }
+    
+    .badge-info {
+        background: rgba(59, 130, 246, 0.15);
+        color: #3b82f6;
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        border-radius: 12px;
+        padding: 4px 10px;
+        font-size: 10px;
+        font-weight: 600;
+    }
+    
+    .profit-positive { color: #10b981; font-weight: 700; font-size: 14px; }
+    .profit-negative { color: #ef4444; font-weight: 700; font-size: 14px; }
+    .spread-value    { color: #60a5fa; font-weight: 700; font-size: 14px; }
+    .bold-mono       { font-family: 'Courier New', monospace; font-weight: 700; font-size: 14px; }
+    
+    .log-container {
+        background: rgba(0, 0, 0, 0.4);
+        border-radius: 12px;
+        padding: 12px;
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+        line-height: 1.5;
+        max-height: 250px;
+        overflow-y: auto;
+    }
+    
+    .log-container::-webkit-scrollbar { width: 6px; }
+    .log-container::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 4px; }
+    .log-container::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.5); border-radius: 4px; }
+    
+    .log-entry    { color: #10b981; margin-bottom: 3px; }
+    .log-timestamp { color: #6b7280; margin-right: 6px; }
+    
+    .metric-card {
+        background: linear-gradient(135deg, rgba(139,92,246,0.1) 0%, rgba(59,130,246,0.1) 100%);
+        border: 1px solid rgba(139, 92, 246, 0.2);
+        border-radius: 12px;
+        padding: 16px 8px;
+        text-align: center;
+    }
+    
+    .metric-value {
+        font-size: 24px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .metric-label {
+        font-size: 10px;
+        color: #a8b3cf;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 6px;
+    }
+    
+    .section-header {
+        font-size: 12px;
+        font-weight: 600;
+        color: #8b5cf6;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .text-right  { text-align: right; }
+    .text-center { text-align: center; }
+    
+    .empty-state      { padding: 40px 20px; text-align: center; color: #6b7280; }
+    .empty-state-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.3; }
+
+    /* ── Exchange Icon Strip ─────────────────────────────────── */
+    .exchange-strip {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: center;
+        align-items: center;
+        padding: 20px 16px;
+    }
+
+    .ex-chip {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        cursor: default;
+        transition: transform 0.2s ease, opacity 0.2s ease;
+        /* FIX: fixed width prevents long names (Crypto.com) from
+           overflowing and overlapping adjacent chips */
+        width: 56px;
+    }
+
+    .ex-chip:hover { transform: translateY(-3px); opacity: 1 !important; }
+
+    .ex-logo {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        border: 1px solid rgba(255,255,255,0.08);
+        overflow: hidden;
+        background: rgba(15,15,30,0.8);
+        position: relative;
+        flex-shrink: 0;
+    }
+
+    .ex-logo img {
+        width: 26px;
+        height: 26px;
+        object-fit: contain;
+    }
+
+    .ex-logo .ex-fallback {
+        font-size: 11px;
+        font-weight: 800;
+        color: #e8eaed;
+        line-height: 1;
+    }
+
+    .ex-name {
+        font-size: 9px;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        text-align: center;
+        /* FIX: overflow hidden + ellipsis so long names don't
+           push layout — full name still visible on hover via title */
+        width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        line-height: 1.2;
+    }
+
+    @media (max-width: 768px) {
+        body { padding: 16px; }
+        .glass-card { padding: 16px; border-radius: 12px; }
+        .grid { gap: 16px; }
+        .lg\\:grid-cols-3  { grid-template-columns: 1fr; }
+        .lg\\:grid-cols-12 { grid-template-columns: 1fr; }
+        .lg\\:col-span-4   { grid-column: span 1; }
+        .lg\\:col-span-8   { grid-column: span 1; }
+        .grid-cols-4       { grid-template-columns: repeat(2, 1fr); }
+        h1 { font-size: 24px; }
+        h1 span:first-child { font-size: 32px; }
+        .btn-primary, .btn-secondary { padding: 10px 16px; font-size: 13px; min-height: 40px; }
+        .data-table { font-size: 11px; }
+        .data-table th, .data-table td { padding: 12px 8px; }
+        .metric-value { font-size: 20px; }
+        .metric-label { font-size: 9px; }
+        .exchange-selector { max-height: 150px; }
+        .log-container  { max-height: 200px; }
+        .table-wrapper  { max-height: 500px; }
+        .ex-logo  { width: 34px; height: 34px; }
+        .ex-logo img { width: 22px; height: 22px; }
+        .exchange-strip { gap: 8px; }
+        .ex-chip { width: 48px; }
+    }
+    
+    @media (min-width: 769px) {
+        body { padding: 32px; }
+        .glass-card { padding: 32px; }
+        .btn-primary, .btn-secondary { padding: 16px 32px; font-size: 16px; }
+        .metric-value { font-size: 32px; }
+        .metric-label { font-size: 12px; }
+        .exchange-selector { max-height: 300px; }
+        .log-container { max-height: 400px; }
+        .table-wrapper { max-height: 600px; }
+    }
+    
+    .spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-radius: 50%;
+        border-top-color: #fff;
+        animation: spin 1s ease-in-out infinite;
+    }
+    
+    @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="mb-6 md:mb-10">
+    <h1 class="text-2xl md:text-4xl font-bold mb-2 flex items-center gap-3">
+        <span class="text-3xl md:text-5xl">🌍</span>
+        <span class="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+            Cross-Exchange Arbitrage Scanner
+        </span>
+    </h1>
+    <p class="text-gray-400 text-sm md:text-base ml-12 md:ml-16">Real-time cryptocurrency arbitrage opportunity detection</p>
+</div>
+
+<div class="glass-card p-4 md:p-8 mb-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <div>
+            <div class="section-header"><span>📥</span> Buy Exchanges</div>
+            <p class="text-xs text-gray-400 mb-2">Select up to 10 exchanges to buy from</p>
+            <select id="buy" multiple class="exchange-selector w-full p-2 md:p-3"></select>
+            <p class="text-xs text-gray-500 mt-2"><span id="buyCount">0</span> selected</p>
+        </div>
+        
+        <div>
+            <div class="section-header"><span>📤</span> Sell Exchanges</div>
+            <p class="text-xs text-gray-400 mb-2">Select up to 10 exchanges to sell on</p>
+            <select id="sell" multiple class="exchange-selector w-full p-2 md:p-3"></select>
+            <p class="text-xs text-gray-500 mt-2"><span id="sellCount">0</span> selected</p>
+        </div>
+        
+        <div class="space-y-3 md:space-y-4">
+            <div class="section-header"><span>⚙️</span> Filters & Settings</div>
+            
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Min Profit %</label>
+                    <input id="minProfit" type="number" step="0.1" value="1.0" class="input-field">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Max Profit %</label>
+                    <input id="maxProfitInput" type="number" step="0.1" value="20.0" class="input-field">
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-xs text-gray-400 mb-1">Min 24h Volume (USD)</label>
+                <input id="minVol" type="number" value="100000" class="input-field">
+            </div>
+            
+            <div>
+                <label class="block text-xs text-gray-400 mb-1">Exclude Blockchains</label>
+                <select id="exclude" multiple size="3" class="exchange-selector w-full p-2 text-sm">
+                    <option value="ETH">Ethereum (ETH)</option>
+                    <option value="TRC20">TRON (TRC20)</option>
+                    <option value="BSC">BNB Chain (BSC)</option>
+                    <option value="SOL">Solana (SOL)</option>
+                    <option value="MATIC">Polygon (MATIC)</option>
+                    <option value="ARB">Arbitrum (ARB)</option>
+                    <option value="OP">Optimism (OP)</option>
+                    <option value="TON">TON</option>
+                    <option value="AVAX">Avalanche (AVAX)</option>
+                </select>
+            </div>
+            
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input id="includeAll" type="checkbox" checked class="w-4 h-4 rounded border-2 border-purple-500 bg-transparent checked:bg-purple-500">
+                <span class="text-xs md:text-sm text-gray-300">Include all available chains</span>
+            </label>
+        </div>
+    </div>
+</div>
+
+<div class="flex flex-col sm:flex-row gap-3 md:gap-4 mb-6">
+    <button id="scanBtn" onclick="startScan()" class="btn-primary flex-1 py-3 md:py-4 rounded-xl text-sm md:text-base flex items-center justify-center gap-2">
+        <span id="scanIcon" class="text-lg md:text-xl">🚀</span>
+        <span id="scanText">START SCANNING</span>
+    </button>
+    <button onclick="downloadCSV()" class="btn-secondary px-6 md:px-8 py-3 md:py-4 rounded-xl flex items-center justify-center gap-2 text-sm md:text-base">
+        <span>⬇️</span>
+        <span>Export CSV</span>
+    </button>
+</div>
+
+<div id="metricsPanel" class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-6" style="display: none;">
+    <div class="metric-card">
+        <div class="metric-value" id="totalOpps">0</div>
+        <div class="metric-label">Total Opportunities</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-value" id="avgProfitStat">0%</div>
+        <div class="metric-label">Avg Profit</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-value" id="maxProfitStat">0%</div>
+        <div class="metric-label">Max Profit</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-value" id="totalPairs">0</div>
+        <div class="metric-label">Unique Pairs</div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    
+    <div class="lg:col-span-4 glass-card p-4 md:p-6">
+        <div class="section-header mb-3"><span>📊</span> Live Activity Log</div>
+        <div id="log" class="log-container"></div>
+    </div>
+    
+    <div class="lg:col-span-8 glass-card overflow-hidden">
+        <div class="px-4 md:px-6 py-4 border-b border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <div class="flex items-center gap-2">
+                <span class="text-base md:text-lg font-semibold">Arbitrage Opportunities</span>
+                <span id="count" class="badge-info">0 found</span>
+            </div>
+            <div id="lastScan" class="text-xs md:text-sm text-gray-500">Never scanned</div>
+        </div>
+        <div id="tableContainer" class="table-wrapper"></div>
+    </div>
+    
+</div>
+
+<!-- ── Supported Exchanges ─────────────────────────────────────── -->
+<div class="glass-card p-4 md:p-6 mt-6">
+    <div class="section-header mb-4"><span>🏦</span> Supported Exchanges</div>
+    <div class="exchange-strip" id="exchangeStrip"></div>
+</div>
+
+<script>
+const exList  = {{ TOP_EXCHANGES | tojson }};
+const exNames = {{ EXCHANGE_NAMES | tojson }};
+let currentResults = [];
+let isScanning     = false;
+
+/* ── Exchange logo config ─────────────────────────────────────── */
+const EX_LOGOS = {
+    // FIX: Binance — switched from bin.bnbstatic.com (hotlink-blocked) to
+    // Google's favicon service which reliably returns the Binance icon.
+    binance:    { url: "https://www.google.com/s2/favicons?sz=64&domain=binance.com", bg: "#F0B90B", fg: "#000" },
+    okx:        { url: "https://www.google.com/s2/favicons?sz=64&domain=okx.com",         bg: "#000",    fg: "#fff" },
+    coinbase:   { url: "https://www.google.com/s2/favicons?sz=64&domain=coinbase.com",     bg: "#1652F0", fg: "#fff" },
+    kraken:     { url: "https://www.google.com/s2/favicons?sz=64&domain=kraken.com",       bg: "#5741D9", fg: "#fff" },
+    bybit:      { url: "https://www.google.com/s2/favicons?sz=64&domain=bybit.com",        bg: "#F7A600", fg: "#000" },
+    kucoin:     { url: "https://www.google.com/s2/favicons?sz=64&domain=kucoin.com",       bg: "#00A550", fg: "#fff" },
+    mexc:       { url: "https://www.google.com/s2/favicons?sz=64&domain=mexc.com",         bg: "#00B897", fg: "#fff" },
+    bitfinex:   { url: "https://www.google.com/s2/favicons?sz=64&domain=bitfinex.com",     bg: "#16B157", fg: "#fff" },
+    bitget:     { url: "https://www.google.com/s2/favicons?sz=64&domain=bitget.com",       bg: "#00F0FF", fg: "#000" },
+    gateio:     { url: "https://www.google.com/s2/favicons?sz=64&domain=gate.io",          bg: "#E3171A", fg: "#fff" },
+    cryptocom: { url: "https://www.google.com/s2/favicons?sz=64&domain=crypto.com",       bg: "#003087", fg: "#fff" },
+    upbit:      { url: "https://www.google.com/s2/favicons?sz=64&domain=upbit.com",        bg: "#0B3594", fg: "#fff" },
+    whitebit:   { url: "https://www.google.com/s2/favicons?sz=64&domain=whitebit.com",     bg: "#22C55E", fg: "#fff" },
+    poloniex:   { url: "https://www.google.com/s2/favicons?sz=64&domain=poloniex.com",     bg: "#2ECC71", fg: "#fff" },
+    bingx:      { url: "https://www.google.com/s2/favicons?sz=64&domain=bingx.com",        bg: "#1DA2B4", fg: "#fff" },
+    lbank:      { url: "https://www.google.com/s2/favicons?sz=64&domain=lbank.com",        bg: "#1890FF", fg: "#fff" },
+    bitstamp:   { url: "https://www.google.com/s2/favicons?sz=64&domain=bitstamp.net",     bg: "#00923A", fg: "#fff" },
+    gemini:     { url: "https://www.google.com/s2/favicons?sz=64&domain=gemini.com",       bg: "#00DCFA", fg: "#000" },
+    bitrue:     { url: "https://www.google.com/s2/favicons?sz=64&domain=bitrue.com",       bg: "#1F6FEB", fg: "#fff" },
+    xt:         { url: "https://www.google.com/s2/favicons?sz=64&domain=xt.com",           bg: "#22D3EE", fg: "#000" },
+    huobi:      { url: "https://www.google.com/s2/favicons?sz=64&domain=htx.com",          bg: "#347AF0", fg: "#fff" },
+    bitmart:    { url: "https://www.google.com/s2/favicons?sz=64&domain=bitmart.com",      bg: "#1B73E8", fg: "#fff" },
+    coinex:     { url: "https://www.google.com/s2/favicons?sz=64&domain=coinex.com",       bg: "#00A0E9", fg: "#fff" },
+    // NEW exchanges
+    toobit:     { url: "https://www.google.com/s2/favicons?sz=64&domain=toobit.com",       bg: "#1A6FFF", fg: "#fff" },
+    blofin:     { url: "https://www.google.com/s2/favicons?sz=64&domain=blofin.com",       bg: "#00C9A7", fg: "#fff" },
+};
+
+function buildExchangeStrip() {
+    const strip = document.getElementById('exchangeStrip');
+    exList.forEach(ex => {
+        const cfg   = EX_LOGOS[ex] || { bg: "#374151", fg: "#fff" };
+        const label = exNames[ex] || ex;
+        const abbr  = label.replace(/[^A-Z0-9]/gi,'').slice(0,4).toUpperCase();
+
+        const chip = document.createElement('div');
+        chip.className = 'ex-chip';
+        // Full name on hover so truncated labels are always accessible
+        chip.title = label;
+
+        chip.innerHTML = `
+            <div class="ex-logo" style="background:${cfg.bg};">
+                <img
+                    src="${cfg.url}"
+                    alt="${label}"
+                    onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
+                    style="display:block;"
+                >
+                <span class="ex-fallback" style="display:none;color:${cfg.fg};">${abbr}</span>
+            </div>
+            <span class="ex-name">${label}</span>
+        `;
+        strip.appendChild(chip);
+    });
+}
+
+function populateSelects() {
+    const buy  = document.getElementById('buy');
+    const sell = document.getElementById('sell');
+    
+    exList.forEach(ex => {
+        let ob = document.createElement('option');
+        ob.value = ex; ob.text = exNames[ex] || ex;
+        buy.appendChild(ob);
+        
+        let os = document.createElement('option');
+        os.value = ex; os.text = exNames[ex] || ex;
+        sell.appendChild(os);
+    });
+    
+    if (buy.options.length  > 0) buy.options[0].selected  = true;
+    if (sell.options.length > 1) sell.options[1].selected = true;
+    
+    updateSelectionCounts();
+    buy.addEventListener('change',  updateSelectionCounts);
+    sell.addEventListener('change', updateSelectionCounts);
+}
+
+function updateSelectionCounts() {
+    document.getElementById('buyCount').textContent  = document.getElementById('buy').selectedOptions.length;
+    document.getElementById('sellCount').textContent = document.getElementById('sell').selectedOptions.length;
+}
+
+function log(msg) {
+    const logEl = document.getElementById('log');
+    const ts    = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    const entry = document.createElement('div');
+    entry.className   = 'log-entry';
+    entry.innerHTML   = `<span class="log-timestamp">[${ts}]</span>${msg}`;
+    logEl.appendChild(entry);
+    logEl.scrollTop   = logEl.scrollHeight;
+}
+
+function setScanningState(scanning) {
+    isScanning = scanning;
+    const btn  = document.getElementById('scanBtn');
+    const icon = document.getElementById('scanIcon');
+    const text = document.getElementById('scanText');
+    
+    if (scanning) {
+        btn.disabled      = true;
+        icon.innerHTML    = '<span class="spinner"></span>';
+        text.textContent  = 'SCANNING...';
+    } else {
+        btn.disabled      = false;
+        icon.textContent  = '🚀';
+        text.textContent  = 'START SCANNING';
+    }
+}
+
+function updateMetrics(results) {
+    if (results.length === 0) {
+        document.getElementById('metricsPanel').style.display = 'none';
+        return;
+    }
+    
+    document.getElementById('metricsPanel').style.display = 'grid';
+    
+    const profits    = results.map(r => parseFloat(r["Profit % After Fees"]) || 0);
+    const avgProfit  = (profits.reduce((a, b) => a + b, 0) / profits.length).toFixed(2);
+    const maxVal     = Math.max(...profits).toFixed(2);
+    const uniquePairs = new Set(results.map(r => r.Pair)).size;
+    
+    document.getElementById('totalOpps').textContent     = results.length;
+    document.getElementById('avgProfitStat').textContent = avgProfit + '%';
+    document.getElementById('maxProfitStat').textContent = maxVal    + '%';
+    document.getElementById('totalPairs').textContent    = uniquePairs;
+}
+
+function renderTable(results) {
+    currentResults = results;
+    document.getElementById('count').textContent = `${results.length} found`;
+    updateMetrics(results);
+    
+    if (results.length === 0) {
+        document.getElementById('tableContainer').innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">🔍</div>
+                <h3 class="text-lg font-semibold mb-2">No Opportunities Found</h3>
+                <p class="text-gray-500 text-sm">Try adjusting your filters or selecting different exchanges</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = `
+        <table class="data-table">
+            <thead><tr>
+                <th class="text-right">#</th>
+                <th>PAIR</th>
+                <th>QUOTE</th>
+                <th>BUY @</th>
+                <th class="text-right">BUY PRICE</th>
+                <th>SELL @</th>
+                <th class="text-right">SELL PRICE</th>
+                <th class="text-right">SPREAD %</th>
+                <th class="text-right">NET PROFIT %</th>
+                <th class="text-right">BUY VOL</th>
+                <th class="text-right">SELL VOL</th>
+                <th class="text-center">W</th>
+                <th class="text-center">D</th>
+                <th>CHAIN</th>
+                <th>STABILITY</th>
+                <th>EXPIRY</th>
+            </tr></thead>
+            <tbody>
+    `;
+    
+    results.forEach((r, i) => {
+        const profitVal   = parseFloat(r["Profit % After Fees"]) || 0;
+        const profitClass = profitVal >= 0 ? "profit-positive" : "profit-negative";
+
+        const wVal   = r["Withdraw?"];
+        const dVal   = r["Deposit?"];
+        const wBadge = wVal === "yes" ? "badge-success" : wVal === "no" ? "badge-danger" : "badge-neutral";
+        const dBadge = dVal === "yes" ? "badge-success" : dVal === "no" ? "badge-danger" : "badge-neutral";
+        const wIcon  = wVal === "yes" ? "✓" : wVal === "no" ? "✕" : "?";
+        const dIcon  = dVal === "yes" ? "✓" : dVal === "no" ? "✕" : "?";
+        
+        html += `
+            <tr>
+                <td class="text-right" style="color:#6b7280;font-weight:600;">${i + 1}</td>
+                <td class="bold-mono">${r.Pair}</td>
+                <td style="color:#a8b3cf;font-weight:600;">${r.Quote}</td>
+                <td style="font-weight:600;">${r["Buy@"]}</td>
+                <td class="text-right bold-mono">${r["Buy Price"]}</td>
+                <td style="font-weight:600;">${r["Sell@"]}</td>
+                <td class="text-right bold-mono">${r["Sell Price"]}</td>
+                <td class="text-right spread-value">${r["Spread %"]}%</td>
+                <td class="text-right ${profitClass}">${r["Profit % After Fees"]}%</td>
+                <td class="text-right bold-mono">${r["Buy Vol (24h)"]}</td>
+                <td class="text-right bold-mono">${r["Sell Vol (24h)"]}</td>
+                <td class="text-center"><span class="status-badge ${wBadge}">${wIcon}</span></td>
+                <td class="text-center"><span class="status-badge ${dBadge}">${dIcon}</span></td>
+                <td><span class="badge-info">${r.Blockchain}</span></td>
+                <td style="font-size:12px;color:#9ca3af;">${r.Stability}</td>
+                <td style="font-size:12px;color:#9ca3af;">${r["Est. Expiry"]}</td>
+            </tr>
+        `;
+    });
+    
+    html += `</tbody></table>`;
+    document.getElementById('tableContainer').innerHTML = html;
+}
+
+async function startScan() {
+    if (isScanning) return;
+    
+    const settings = {
+        buy_exchanges:      Array.from(document.getElementById('buy').selectedOptions).map(o => o.value),
+        sell_exchanges:     Array.from(document.getElementById('sell').selectedOptions).map(o => o.value),
+        min_profit:         parseFloat(document.getElementById('minProfit').value),
+        max_profit:         parseFloat(document.getElementById('maxProfitInput').value),
+        min_24h_vol_usd:    parseFloat(document.getElementById('minVol').value),
+        exclude_chains:     Array.from(document.getElementById('exclude').selectedOptions).map(o => o.value),
+        include_all_chains: document.getElementById('includeAll').checked
+    };
+    
+    if (!settings.buy_exchanges.length || !settings.sell_exchanges.length) {
+        log("❌ Error: Please select at least one buy and one sell exchange");
+        return;
+    }
+    
+    if (settings.buy_exchanges.length > 10 || settings.sell_exchanges.length > 10) {
+        log("❌ Error: Maximum 10 exchanges per side");
+        return;
+    }
+    
+    setScanningState(true);
+    log("🔍 Starting scan...");
+    document.getElementById('tableContainer').innerHTML = `
+        <div class="empty-state">
+            <div class="empty-state-icon">⏳</div>
+            <h3 class="text-lg font-semibold mb-2">Scanning exchanges...</h3>
+            <p class="text-gray-500 text-sm">Please wait while we analyze arbitrage opportunities</p>
+        </div>
+    `;
+    
+    try {
+        const res  = await fetch("/api/scan", {
+            method:  "POST",
+            headers: {"Content-Type": "application/json"},
+            body:    JSON.stringify(settings)
+        });
+        
+        const data = await res.json();
+        data.logs.forEach(msg => log(msg));
+        renderTable(data.results);
+        
+        const now = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+        document.getElementById('lastScan').textContent = `Last scan: ${now}`;
+        
+    } catch(e) {
+        log(`❌ Error: ${e.message}`);
+        document.getElementById('tableContainer').innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">⚠️</div>
+                <h3 class="text-lg font-semibold mb-2">Scan Failed</h3>
+                <p class="text-gray-500 text-sm">${e.message}</p>
+            </div>
+        `;
+    } finally {
+        setScanningState(false);
+    }
+}
+
+function downloadCSV() {
+    if (currentResults.length === 0) {
+        log("⚠️ No data to export");
+        return;
+    }
+    
+    const headers = Object.keys(currentResults[0]);
+    const csv = [
+        headers.join(','),
+        ...currentResults.map(row =>
+            headers.map(header => {
+                const value = row[header];
+                return typeof value === 'string' && value.includes(',')
+                    ? `"${value}"`
+                    : value;
+            }).join(',')
+        )
+    ].join('\n');
+    
+    const blob = new Blob([csv], {type: 'text/csv'});
+    const url  = window.URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `arbitrage_opportunities_${Date.now()}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    log("✅ CSV exported successfully");
+}
+
+window.onload = () => {
+    populateSelects();
+    buildExchangeStrip();
+    log("✨ Scanner initialized and ready");
+    log("💡 Select your exchanges and click START SCANNING to begin");
+};
+</script>
+
+</body>
+</html>
